@@ -1,0 +1,79 @@
+version: "3.5"
+volumes:
+  datadb:
+  pgdata:
+  pgadmin:
+  filesdata:
+  rawdata:
+
+services:
+  postgres:
+    image: postgres:12-alpine
+    env_file: .env.docker
+    command: >
+      -c ssl=on 
+      -c ssl_cert_file=/var/lib/postgresql/db.pem
+      -c ssl_key_file=/var/lib/postgresql/db-key.pem
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./certs/db.local.pem:/var/lib/postgresql/db.pem
+      - ./certs/db.local-key.pem:/var/lib/postgresql/db-key.pem
+    ports:
+      - 127.0.0.1:5432:5432
+    networks:
+      - platform
+  pgadmin:
+    image: dpage/pgadmin4
+    networks:
+      - platform
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    ports:
+      - 127.0.0.1:9002:80
+      - 127.0.0.1:10002:443
+    env_file: .env.docker
+  redis:
+    image: redis:6-alpine
+    ports:
+      - 127.0.0.1:6379:6379
+  jupyter:
+    image: nuxion/datascience
+    ports:
+      - 127.0.0.1:8888:8888
+      # Dask ports
+      - 127.0.0.1:8787:8787
+      - 127.0.0.1:8786:8786
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./nbconf/jupyter_lab_config.py:/app/conf/jupyter_lab_config.py
+    networks:
+      - platform
+  ingress:
+    image: nginx
+    #ports:
+    #  - 127.0.0.1:3005:3000
+    volumes:
+      #- ./sites:/etc/nginx/sites-enabled
+      - ./ingress.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/jupyter.local.pem:/etc/ssl/certs/jupyter.local.pem
+      - ./certs/jupyter.local-key.pem:/etc/ssl/private/jupyter.local-key.pem
+    network_mode: host
+  fileserver:
+    image: nginx
+    volumes:
+      - ./fileserver.conf:/etc/nginx/nginx.conf:ro
+      # Need 101:101 permissions
+      - filesdata:/usr/share/nginx/html
+      - ./certs/fileserver.local.pem:/etc/ssl/certs/fileserver.local.pem
+      - ./certs/fileserver.local-key.pem:/etc/ssl/private/fileserver.local-key.pem
+    ports:
+      - 127.0.0.1:4444:4444
+  rawdata:
+    image: nuxion/rawdata
+    volumes:
+      - rawdata:/data
+    ports:
+      - 127.0.0.1:6667:6667
+
+networks:
+  platform: 
