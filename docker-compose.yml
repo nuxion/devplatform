@@ -12,18 +12,25 @@ services:
     env_file: .env.docker
     command: >
       -c ssl=on 
-      -c ssl_cert_file=/var/lib/postgresql/db.pem
-      -c ssl_key_file=/var/lib/postgresql/db-key.pem
+      -c ssl_cert_file=/var/lib/postgresql/db.local.pem
+      -c ssl_key_file=/var/lib/postgresql/db.local-key.pem
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./certs/db.local.pem:/var/lib/postgresql/db.pem
-      - ./certs/db.local-key.pem:/var/lib/postgresql/db-key.pem
+      - ./certs/db.local.pem:/var/lib/postgresql/db.local.pem
+      - ./certs/db.local-key.pem:/var/lib/postgresql/db.local-key.pem
     ports:
       - 127.0.0.1:5432:5432
     networks:
       - platform
+
+  postgres-rest:
+    image: postgrest/postgrest:v8.0.0
+    depends_on:
+      - postgres
+    # restart: unless-stopped
+    env_file: .env.docker
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:6.0
     networks:
       - platform
     volumes:
@@ -69,9 +76,15 @@ services:
     ports:
       - 127.0.0.1:4444:4444
   rawdata:
+    # image: nuxion/rawdata:0.4.0
     image: nuxion/rawdata
+    environment:
+      - RD_STREAM=true
+      - RD_REDIS_ADDR=redis:6379
+      - RD_LIMIT=2000
+      - RD_STREAM_NS=RD
     volumes:
-      - rawdata:/data
+      - rawdata:/app/data
     ports:
       - 127.0.0.1:6667:6667
 
