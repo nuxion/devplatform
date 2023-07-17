@@ -2,37 +2,44 @@ version: "3.5"
 volumes:
   datadb:
   pgdata:
+  pgdata14:
+  pgdata14-custom:
   pgadmin:
   filesdata:
   rawdata:
+  registrydata:
+  sonicdata:
 
 services:
   postgres:
-    image: postgres:12-alpine
-    env_file: .env.docker
+    image: postgres:14-alpine
+    env_file: .env.postgres
     command: >
       -c ssl=on 
       -c ssl_cert_file=/var/lib/postgresql/db.local.pem
       -c ssl_key_file=/var/lib/postgresql/db.local-key.pem
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata14:/var/lib/postgresql/data
       - ./certs/db.local.pem:/var/lib/postgresql/db.local.pem
       - ./certs/db.local-key.pem:/var/lib/postgresql/db.local-key.pem
     ports:
       - 127.0.0.1:5432:5432
     networks:
-      - platform
-
-  postgres-rest:
-    image: postgrest/postgrest:v8.0.0
-    depends_on:
-      - postgres
-    # restart: unless-stopped
-    env_file: .env.docker
-  pgadmin:
-    image: dpage/pgadmin4:6.0
+      - devplatform
+  custom-postgres:
+    image: nuxion/custom-postgres:14.5-0.2.1
+    env_file: .env.postgres
+    restart: on-failure
+    volumes:
+      - pgdata14-custom:/var/lib/postgresql/data
+    ports:
+      - 127.0.0.1:5432:5432
     networks:
-      - platform
+      - devplatform
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    networks:
+      - devplatform
     volumes:
       - pgadmin:/var/lib/pgadmin
     ports:
@@ -44,17 +51,18 @@ services:
     ports:
       - 127.0.0.1:6379:6379
   jupyter:
-    image: nuxion/datascience
+    image: nuxion/datascience:0.6.0
     ports:
-      - 127.0.0.1:8888:8888
+      - 127.0.0.1:8889:8888
       # Dask ports
       - 127.0.0.1:8787:8787
       - 127.0.0.1:8786:8786
     volumes:
       - ./notebooks:/app/notebooks
+      - filesdata:/app/shared
       - ./nbconf/jupyter_lab_config.py:/app/conf/jupyter_lab_config.py
     networks:
-      - platform
+      - devplatform
   ingress:
     image: nginx
     #ports:
@@ -66,27 +74,38 @@ services:
       - ./certs/jupyter.local-key.pem:/etc/ssl/private/jupyter.local-key.pem
     network_mode: host
   fileserver:
-    image: nginx
+    image: nuxion/fileserver
     volumes:
       - ./fileserver.conf:/etc/nginx/nginx.conf:ro
-      # Need 101:101 permissions
       - filesdata:/usr/share/nginx/html
+      #- ./shared:/usr/share/nginx/html
+      # Need 101:101 permissions
       - ./certs/fileserver.local.pem:/etc/ssl/certs/fileserver.local.pem
       - ./certs/fileserver.local-key.pem:/etc/ssl/private/fileserver.local-key.pem
     ports:
-      - 127.0.0.1:4444:4444
+      # - 127.0.0.1:4444:4444
+      - 192.168.88.150:4444:4444
   rawdata:
     # image: nuxion/rawdata:0.4.0
-    image: nuxion/rawdata
+    image: nuxion/rawdata:latest
     environment:
       - RD_STREAM=true
       - RD_REDIS_ADDR=redis:6379
       - RD_LIMIT=2000
       - RD_STREAM_NS=RD
+    networks:
+      - devplatform
     volumes:
       - rawdata:/app/data
     ports:
       - 127.0.0.1:6667:6667
-
+  registry:
+    image: registry:2
+    networks:
+      - devplatform
+    ports:
+      - 127.0.0.1:5000:5000
+    volumes:
+      - registrydata:/var/lib/registry
 networks:
-  platform: 
+  devplatform: 
