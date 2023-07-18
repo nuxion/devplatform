@@ -7,8 +7,8 @@ volumes:
   pgadmin:
   filesdata:
   rawdata:
+  redisdata:
   registrydata:
-  sonicdata:
 
 services:
   postgres:
@@ -47,9 +47,14 @@ services:
       - 127.0.0.1:10002:443
     env_file: .env.docker
   redis:
+    command: >
+      redis-server /usr/local/etc/redis/redis.conf
     image: redis:6-alpine
     ports:
       - 127.0.0.1:6379:6379
+    volumes:
+      - redisdata:/data
+      - ./configs:/usr/local/etc/redis
   jupyter:
     image: nuxion/datascience:0.6.0
     ports:
@@ -60,7 +65,7 @@ services:
     volumes:
       - ./notebooks:/app/notebooks
       - filesdata:/app/shared
-      - ./nbconf/jupyter_lab_config.py:/app/conf/jupyter_lab_config.py
+      - ./configs/jupyter_lab_config.py:/app/conf/jupyter_lab_config.py
     networks:
       - devplatform
   ingress:
@@ -69,14 +74,14 @@ services:
     #  - 127.0.0.1:3005:3000
     volumes:
       #- ./sites:/etc/nginx/sites-enabled
-      - ./ingress.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/ingress.conf:/etc/nginx/nginx.conf:ro
       - ./certs/jupyter.local.pem:/etc/ssl/certs/jupyter.local.pem
       - ./certs/jupyter.local-key.pem:/etc/ssl/private/jupyter.local-key.pem
     network_mode: host
   fileserver:
     image: nuxion/fileserver
     volumes:
-      - ./fileserver.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/fileserver.conf:/etc/nginx/nginx.conf:ro
       - filesdata:/usr/share/nginx/html
       #- ./shared:/usr/share/nginx/html
       # Need 101:101 permissions

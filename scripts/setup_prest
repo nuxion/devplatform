@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# This is a simple script to create user services with full privileges.
+# Be careful!. 
+RAND=`strings /dev/urandom | grep -o '[[:alnum:]]' | head -n 30 | tr -d '\n'; echo`
+
+DBUSER=${1:-authenticator}
+DBUSER_PASS=${2:-$RAND}
+
+DOCKER_IMAGE="postgres"
+docker-compose exec $DOCKER_IMAGE psql -U postgres -c "create role anon nologin;
+						      grant usage on schema public to anon;
+						      create role $DBUSER noinherit login password '$DBUSER_PASS';
+						      grant anon to $DBUSER;"
+echo "Created"
+echo $DBUSER_PASS

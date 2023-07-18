@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+# This is a simple script to create user services with full privileges.
+# Be careful!. 
+
+DOCKER_IMAGE="postgres"
+
+docker-compose exec -u postgres $DOCKER_IMAGE psql
