@@ -27,7 +27,7 @@ services:
     networks:
       - devplatform
   custom-postgres:
-    image: nuxion/custom-postgres:14.5-0.2.1
+    image: nuxion/custom-postgres:14.8-0.3.0
     env_file: .env.postgres
     restart: on-failure
     volumes:
@@ -37,7 +37,7 @@ services:
     networks:
       - devplatform
   pgadmin:
-    image: dpage/pgadmin4:7.4
+    image: dpage/pgadmin4:8.11
     networks:
       - devplatform
     volumes:
@@ -55,6 +55,8 @@ services:
     volumes:
       - redisdata:/data
       - ./configs:/usr/local/etc/redis
+    networks:
+      - devplatform
   jupyter:
     image: nuxion/datascience:0.6.0
     ports:
@@ -91,17 +93,17 @@ services:
       # - 127.0.0.1:4444:4444
       - 192.168.88.150:4444:4444
   rawdata:
-    # image: nuxion/rawdata:0.4.0
-    image: nuxion/rawdata:latest
-    environment:
-      - RD_STREAM=true
-      - RD_REDIS_ADDR=redis:6379
-      - RD_LIMIT=2000
-      - RD_STREAM_NS=RD
+    image: nuxion/rawdata:0.5.0rc1
+      # environment:
+      #  - RD_NS_DIR=/tmp
+      # - RD_STREAM=false
+      # - RD_REDIS_ADDR=redis:6379
+      # - RD_LIMIT=2000
+      # - RD_STREAM_NS=RD
     networks:
       - devplatform
-    volumes:
-      - rawdata:/app/data
+        #volumes:
+        #- rawdata:/app/data
     ports:
       - 127.0.0.1:6667:6667
   registry:
